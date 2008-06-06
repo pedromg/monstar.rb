@@ -7,18 +7,11 @@ class Monstar
 
   # Initial files status, stored in an array
   def initialize(files, app, interval)
-    puts ""
-    puts "MONSTAR ::"
     @files = files
     @app = app
     @i = interval
     @f0 = []
     @files.each { |f| @f0 << file_stat(f) }
-    puts "  * files ctime stamp collected"
-    puts "  * initialization prepared"
-    puts "    - app: #{@app}"
-    puts "    - interval: #{@i} secs."
-    puts "    - files: #{@files.i.join(' | '(}"
   end
 
   # Get the ctime (change time stamp) info for the arg file
@@ -53,12 +46,13 @@ class Monstar
         puts "  * file change detected !!!"
         
         kill_app
+
         puts "  * app process killed..."
         @f0 = f1
         puts "  * file ctime stamp stored..."
         puts "  * re-starting #{@app} ..."
+        
         load_app
-        puts "  * done! up and running..."
       end
     end
     Process.waitall
@@ -67,14 +61,28 @@ end
 
 
 # ----
-# array of files to be monitored
-files = %w(neon.rb ./neon/models.rb ./neon/controllers.rb ./neon/views.rb ./neon/helpers.rb )
+# if you want to use this class, as a running shell command, use the code below:
+begin
+  # ruby app to be run
+  app = $*[0]
+  # interval in seconds to use for file change checks
+  interval = $*[1].to_i
+  # array of files to be monitored
+  files = $*[2..$*.length-1]
+  # extra verifications:
+  raise if interval < 1
+  puts "MONSTAR:: monitor source changes and start new process for app"
+  puts "  - script  : #{app}"
+  puts "  - interval: #{interval} secs."
+  puts "  - files: #{files.join(' ')}"
 
-# app to be run
-app = 'neon.rb'
+  m = Monstar.new(files, app, interval)
+  m.start
+rescue => e
+  puts "HALT :: "
+  puts "  - usage: monstar.rb <script.rb> <interval> <space_separated files>"
+  puts e.backtrace.join("\n")
+  exit
+end
 
-# interval in seconds to use for file change checks
-interval = 2
 
-m = Monstar.new(files, app, interval)
-m.start
