@@ -19,16 +19,16 @@ class Monstar
     File.open(f, 'r').ctime 
   end
 
-  # run the ruby script inside a new process
+  # fork a new process to run the ruby script
   def load_app
-    @prc = Process.fork { load(@app) }
+    @pid = Process.fork { load(@app) }
   end
 
   # kill the process previously forked, and wait its termination so that
   # new Mongrel instance starts fine without colision
   def kill_app
-    Process.kill("KILL", @prc)
-    Process.wait(@prc)
+    Process.kill("KILL", @pid)
+    Process.wait(@pid)
   end
           
   # monitor loop, that checks the condition (time interval). Could be a new thread, 
@@ -40,19 +40,16 @@ class Monstar
       f1 = Array.new
       @files.each { |f| f1 << file_stat(f) } 
       if !(f1 == @f0)
-        puts ("File change... will restart #{@app} NOW")
-        puts ""
-        puts "MONSTAR :: event @ #{Time.now.to_s}"
+        puts ("MONSTAR::File change... will restart #{@app} NOW (#{Time.now.to_s})")
         puts "  * file change detected !!!"
-        
+        # shut the process down
         kill_app
-
         puts "  * app process killed..."
         @f0 = f1
-        puts "  * file ctime stamp stored..."
-        puts "  * re-starting #{@app} ..."
-        
+        puts "  * file ctime stamp stored... restarting #{@app}"
+        # load a new process
         load_app
+        puts "  * MONSTAR:: #{@app} restarted!"
       end
     end
     Process.waitall
@@ -69,8 +66,9 @@ begin
   interval = $*[1].to_i
   # array of files to be monitored
   files = $*[2..$*.length-1]
-  # extra verifications:
+  # extra verifications: interval should_not be < 1; files must exist;
   raise if interval < 1
+  files.each { |f| raise if !File.exist?(f) }
   puts "MONSTAR:: monitor source changes and start new process for app"
   puts "  - script  : #{app}"
   puts "  - interval: #{interval} secs."
@@ -80,7 +78,7 @@ begin
   m.start
 rescue => e
   puts "HALT :: "
-  puts "  - usage: monstar.rb <script.rb> <interval> <space_separated files>"
+  puts "  - usage: monstar.rb <script.rb> <interval> <space separated files>"
   puts e.backtrace.join("\n")
   exit
 end
