@@ -3,13 +3,20 @@
 # * restart the specific Mongrel server upon source changes...
 # * all the scripts file ctime is monitored.
 # * in fact, this script will restart any app you want. I used it for a Mongrel process. Just set the app variable and pass it into the class.
+# * script version: 0.8
+# * author: pedro mg (pedro.mota@gmail.com)
+# * blog: http://blog.tquadrado.com
+# * this script is licensed under a Ruby license
+
+require 'optparse'
+
 class Monstar
 
   # Initial files status, stored in an array
-  def initialize(files, app, interval)
-    @files = files
-    @app = app
+  def initialize(app, interval, files)
+    @app = app.join(' ')
     @i = interval
+    @files = files
     @f0 = []
     @files.each { |f| @f0 << file_stat(f) }
   end
@@ -25,7 +32,7 @@ class Monstar
   end
 
   # kill the process previously forked, and wait its termination so that
-  # new Mongrel instance starts fine without colision
+  # new Mongrel instance starts fine without address/port colision
   def kill_app
     Process.kill("KILL", @pid)
     Process.wait(@pid)
@@ -60,26 +67,32 @@ end
 # ----
 # if you want to use this class, as a running shell command, use the code below:
 begin
-  # ruby app to be run
-  app = $*[0]
-  # interval in seconds to use for file change checks
-  interval = $*[1].to_i
-  # array of files to be monitored
-  files = $*[2..$*.length-1]
-  # extra verifications: interval should_not be < 1; files must exist;
-  raise if interval < 1
-  files.each { |f| raise if !File.exist?(f) }
-  puts "MONSTAR:: monitor source changes and start new process for app"
-  puts "  - script  : #{app}"
-  puts "  - interval: #{interval} secs."
-  puts "  - files: #{files.join(' ')}"
+  # from v0.5, option parsing was added. 
+  # I really needed it since I added options to the scripts I was monitoring...
+  options = {}
+  # defaults
+  options[:interval] = 3
+  OptionParser.new do |opts|
+    opts.on("-a", "--app SCRIPT.RB,PARAMS,...", Array) {|v| options[:app] = v }
+    opts.on("-i", "--interval VAL", Integer) {|v| options[:interval] = v }
+    opts.on("-f", "--files FILE,FILE1,...", Array) {|v| options[:files] = v }
+    opts.on("-h", "--help") {|v| puts opts; exit }
+  end.parse!
 
-  m = Monstar.new(files, app, interval)
+  # extra verifications: interval should_not be < 1; files must exist;
+  raise if options[:interval] < 1
+  options[:files].each { |f| raise if !File.exist?(f) }
+  puts "MONSTAR:: monitor source changes and start new process for app"
+  puts "  - script  : #{options[:app].join(' ')}"
+  puts "  - interval: #{options[:interval]} secs."
+  puts "  - files: #{options[:files].join(' ')}"
+
+  m = Monstar.new(options[:app], options[:interval], options[:files])
   m.start
 rescue => e
-  puts "HALT :: "
-  puts "  - usage: monstar.rb <script.rb> <interval> <space separated files>"
-  puts e.backtrace.join("\n")
+  puts "... please try some help: monstar.rb -h"
+  # if you want some verbose dump, uncheck the follow line:
+  # puts "HALT::DUMP => #{e.backtrace.join('\n')}"
   exit
 end
 
