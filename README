@@ -1,0 +1,69 @@
+= monstar.rb
+
+== short
+
+ * restart the specific Mongrel server upon source code changes...
+ * all the scripts file ctime is monitored.
+ * in fact, this script will restart any app you want. I used it for a Mongrel process. Just set the app variable and pass it into the class.
+
+== description
+
+Now, under development, Mongrel(s), behind the a Lighttpd frontend, need to be restarted upon source code changes in the models, views, controllers or helpers (yet not CSS files, since they are taken care by lighty). Instead of moving to the xterm, kill the process and restart it i decided to automate it.
+Since i was disconnected from the webz, I’ve done this script to detect file changes from a pre-specified array of files, monitored under a certain interval in seconds, with an action to start, kill, and restart an app (in my case, a Mongreled Camping web app).
+
+Problem: Threads
+Solution: Process::fork
+
+The app load (in this case I load/execute ruby scripts) is done via Process::fork. A new process starts up each time this method is fired up upon a File.open(f, 'r').ctime change:
+
+def load_app
+  @pid = Process.fork { load(@app) }
+end
+
+Before loading up a new updated instance of the app, the previous one must be terminated. Threads behaviour was problematic because of the thread tree termination in time. This is well done, in a safe mode, with Process::kill(signal, pid) and Process::wait(pid) that waits the pid process termination, essential in the case of Mongrel server.
+
+def kill_app
+  Process.kill("KILL", @pid)
+  Process.wait(@pid)
+end
+
+== usage: 
+
+  * ~$ monstar [options]
+       -a, --app SCRIPT.RB,PARAMS,...
+       -i, --interval VAL
+       -f, --files FILE,FILE1,...
+       -h, --help
+
+== example:
+
+  * ~$ monstar.rb neon.rb 2 neon.rb ./neon/controllers.rb ./neon/models.rb ./neon/views.rb
+
+== notice:
+  * v0.8
+  * who: pedro.mota@gmail.com 
+  * when: 05-jun-2008
+  * what: this is free software. use. refactor. share.
+  * the author will not be responsible for any bumps during the journey! This was done in some minutes!
+
+== LICENSE:
+
+   Copyright (c) 2007 pedro mg
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to
+   deal in the Software without restriction, including without limitation the
+   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+   sell copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+   THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
