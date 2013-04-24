@@ -2,11 +2,16 @@
 
 == short
 
- * restart the specific Mongrel server upon source code changes...
+ * restart specific ruby scripts or system commands upon source code changes.
  * all the scripts file ctime is monitored.
  * in fact, this script will restart any app you want. I used it for a Mongrel process. Just set the app variable and pass it into the class.
 
 == description
+
+UPDATE 24-04-2013-start
+New -e switch to allow not only ruby scripts but also system scripts/apps. For -e scripts I use Process.spawn(script) instead of Process.fork.
+Example: using this to monitor Sinatra apps development called via rackup.
+UPDATE 24-04-2013-end
 
 Now, under development, Mongrel(s), behind the a Lighttpd frontend, need to be restarted upon source code changes in the models, views, controllers or helpers (yet not CSS files, since they are taken care by lighty). Instead of moving to the xterm, kill the process and restart it i decided to automate it.
 Since i was disconnected from the webz, I’ve done this script to detect file changes from a pre-specified array of files, monitored under a certain interval in seconds, with an action to start, kill, and restart an app (in my case, a Mongreled Camping web app).
@@ -23,7 +28,7 @@ end
 Before loading up a new updated instance of the app, the previous one must be terminated. Threads behaviour was problematic because of the thread tree termination in time. This is well done, in a safe mode, with Process::kill(signal, pid) and Process::wait(pid) that waits the pid process termination, essential in the case of Mongrel server.
 
 def kill_app
-  Process.kill("KILL", @pid)
+  Process.kill("INT", @pid)
   Process.wait(@pid)
 end
 
@@ -31,6 +36,7 @@ end
 
   * ~$ monstar [options]
        -a, --app SCRIPT.RB,PARAMS,...
+       -e, --exec SCRIPT,PARAMS,...
        -i, --interval VAL
        -f, --files FILE,FILE1,...
        -h, --help
@@ -40,7 +46,7 @@ end
   * ~$ monstar.rb neon.rb 2 neon.rb ./neon/controllers.rb ./neon/models.rb ./neon/views.rb
 
 == notice:
-  * v0.8
+  * v0.9
   * who: pedro.mota@gmail.com 
   * when: 05-jun-2008
   * what: this is free software. use. refactor. share.
