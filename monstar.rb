@@ -13,8 +13,9 @@ require 'optparse'
 class Monstar
 
   # Initial files status, stored in an array
-  def initialize(app, interval, files)
-    @app = app.join(' ')
+  def initialize(app, exec, interval, files)
+    @app  = app.nil? ? nil : app.join(' ') 
+    @exec = exec.nil? ? nil : exec.join(' ') 
     @i = interval
     @files = files
     @f0 = []
@@ -26,15 +27,22 @@ class Monstar
     File.open(f, 'r').ctime 
   end
 
-  # fork a new process to run the ruby script
+  # fork/spawn a new process to run the:
+  # ruby script if -a
+  # system script if -e
   def load_app
-    @pid = Process.fork { load(@app) }
+    if !@app.nil? 
+      @pid = Process.fork { load(@app) }
+    else
+      @pid = Process.spawn("#{@exec.to_s}")
+    end
+    puts " * new PID: #{@pid}"
   end
 
   # kill the process previously forked, and wait its termination so that
   # new Mongrel instance starts fine without address/port colision
   def kill_app
-    Process.kill("KILL", @pid)
+    Process.kill("INT", @pid)
     Process.wait(@pid)
   end
           
@@ -74,6 +82,7 @@ begin
   options[:interval] = 3
   OptionParser.new do |opts|
     opts.on("-a", "--app SCRIPT.RB,PARAMS,...", Array) {|v| options[:app] = v }
+    opts.on("-e", "--exec SCRIPT,PARAMS...", Array) {|v| options[:exec] = v }
     opts.on("-i", "--interval VAL", Integer) {|v| options[:interval] = v }
     opts.on("-f", "--files FILE,FILE1,...", Array) {|v| options[:files] = v }
     opts.on("-h", "--help") {|v| puts opts; exit }
@@ -83,17 +92,18 @@ begin
   raise if options[:interval] < 1
   options[:files].each { |f| raise if !File.exist?(f) }
   puts "MONSTAR:: monitor source changes and start new process for app"
-  puts "  - script  : #{options[:app].join(' ')}"
+  puts "  - script  : #{options[:app].join(' ')}" if !options[:app].nil?
+  puts "  - exec    : #{options[:exec].join(' ')}"if !options[:exec].nil?
   puts "  - interval: #{options[:interval]} secs."
-  puts "  - files: #{options[:files].join(' ')}"
+  puts "  - files: #{options[:files].join(' ')}"if !options[:files].nil?
 
-  m = Monstar.new(options[:app], options[:interval], options[:files])
+  m = Monstar.new(options[:app], options[:exec], options[:interval], options[:files])
   m.start
-rescue => e
-  puts "... please try some help: monstar.rb -h"
+# rescue => e
+#  puts "... please try some help: monstar.rb -h"
   # if you want some verbose dump, uncheck the follow line:
   # puts "HALT::DUMP => #{e.backtrace.join('\n')}"
-  exit
+#  exit
 end
 
 
