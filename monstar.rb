@@ -36,7 +36,6 @@ class Monstar
     else
       @pid = Process.spawn("#{@exec.to_s}")
     end
-    puts " * new PID: #{@pid}"
   end
 
   # kill the process previously forked, and wait its termination so that
@@ -99,11 +98,11 @@ begin
 
   m = Monstar.new(options[:app], options[:exec], options[:interval], options[:files])
   m.start
-# rescue => e
-#  puts "... please try some help: monstar.rb -h"
+ rescue => e
+  puts "... please try some help: monstar.rb -h"
   # if you want some verbose dump, uncheck the follow line:
   # puts "HALT::DUMP => #{e.backtrace.join('\n')}"
-#  exit
+  exit
 end
 
 
