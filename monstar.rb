@@ -3,7 +3,7 @@
 # * restart the specific Mongrel server upon source changes...
 # * all the scripts file ctime is monitored.
 # * in fact, this script will restart any app you want. I used it for a Mongrel process. Just set the app variable and pass it into the class.
-# * script version: 0.8
+# * script version: 0.9
 # * author: pedro mg (pedro.mota@gmail.com)
 # * blog: http://blog.tquadrado.com
 # * this script is licensed under a Ruby license
